@@ -12,15 +12,25 @@
 .def razr1 = r26
 .def seco2 = r18
 .def flag = r28
+.def addr = r30
 
 .dseg
 .cseg
-.org 0
+
+
+
 
 rjmp Reset
 reti
 .org $002 
 rjmp TIM0_OVF // Timer0 Overflow Handler
+
+.org $004
+//store ind codes here
+ind_table:
+.db 63, 6, 91, 79, 102, 109, 125, 7, 127, 111
+
+
 
 Reset:
 
@@ -30,8 +40,6 @@ ldi razr1, 0
 ldi razr2, 0
 ldi razr4, 0
 ldi razr3, 0
-ldi flag, 1
-ldi flag1, 0
 
 ldi temp, 0xff
 out DDRB, temp
@@ -44,13 +52,42 @@ ldi temp, 0b00000010
 out TIMSK, temp
 out TIFR, temp
 
-ldi temp, 0x83//0xc0
+ldi temp, 0x83
 out TCNT0, temp
  
 ldi temp, 0b00000100// prescaler 256
 out TCCR0, temp
 
 sei
+
+
+
+
+
+ldi temp, 63
+mov r0, temp
+ldi temp, 6
+mov r1, temp
+ldi temp, 91
+mov r2, temp
+ldi temp, 79
+mov r3, temp
+ldi temp, 102
+mov r4, temp
+ldi temp, 109
+mov r5, temp
+ldi temp, 125
+mov r6, temp
+ldi temp, 7
+mov r7, temp
+ldi temp, 127
+mov r8, temp
+ldi temp, 111
+mov r9, temp
+
+
+
+
 //////////////////////////////////////////
 ////////********MAIN********//////////////
 //////////////////////////////////////////
@@ -67,42 +104,42 @@ out PORTD, temp
 //mov indtemp, razr3
 mov indtemp, razr1
 rcall Ind
-rcall Delay
-rcall nul
+//rcall Delay
+//rcall nul
 
 ldi temp, 0b1101
 out PORTD, temp
 //mov indtemp, razr4
 mov indtemp, razr2
 rcall Ind
-rcall Delay
-rcall nul
+//rcall Delay
+//rcall nul
 
 ldi temp, 0b0111
 out PORTD, temp
 //mov indtemp, seco1
 mov indtemp, razr3
 rcall Ind
-rcall Delay
-rcall nul
+//rcall Delay
+//rcall nul
 
 ldi temp, 0b1011
 out PORTD, temp
 //mov indtemp, seco1
 mov indtemp, razr4
 rcall Ind
-rcall Delay
-rcall nul
+//rcall Delay
+//rcall nul
 
 rjmp Main
 //////////////////////////////////////////
-
+/*
 nul:
 ldi temp, 0x00
 OR temp, flag1
 out PORTB, temp
 ret
-
+*/
 ////////////////////////////////////////
 /////////******INTERRUPT******//////////
 ///////////////////////////////////////
@@ -111,11 +148,11 @@ cli
 
 inc count
 
-cpi count, 125//1
+cpi count, 125
 breq nul1
 
 /////////////
-cpi count, 250//2
+cpi count, 250
 breq f
 /////////////
 
@@ -183,7 +220,7 @@ rjmp output
 umn41:
 cpi razr1, 2
 breq umn5
-rjmp butout
+rjmp output
 
 umn5:
 cpi razr2, 4
@@ -191,16 +228,12 @@ breq umn6
 rjmp output
 
 umn6:
-ldi seco1, 0
-ldi seco2, 0
-ldi razr4, 0
-ldi razr3, 0
 ldi razr2, 0
 ldi razr1, 0
 
 output:
 //////////////
-ldi temp, 0x83//0xc0
+ldi temp, 0x83
 //////////////
 out TCNT0, temp
 sei
@@ -212,6 +245,7 @@ reti
 ////////////////////////////////////////////////////
 ///////////////*****BUTTON CLICK*****///////////////
 ////////////////////////////////////////////////////
+
 but11:
 cpi flag, 0
 breq butout
@@ -272,13 +306,29 @@ ldi razr1, 0
 
 butout:
 ret
+
 //////////////////////////////////////////
 
 
 //////////////////////////////////////////
 ////////////***INDICATION***/////////////
 ////////////////////////////////////////
+
 Ind:
+
+//check indtemp for ranges
+//here
+ldi addr, low(ind_table)
+//ldi XH, high(ind_table)
+add addr, indtemp
+//ld temp, addr
+OR temp, flag1
+out PORTB, temp
+rcall Delay
+ret
+
+
+/*
 cpi indtemp, 1
 breq Ind1
 cpi indtemp, 2
@@ -301,54 +351,42 @@ cpi indtemp, 0
 breq Ind0
 Ind1:
 ldi temp, 6
-OR temp, flag1
-out PORTB, temp
-ret
+rjmp ind_out
 Ind2:
 ldi temp, 91
-OR temp, flag1
-out PORTB, temp
-ret
+rjmp ind_out
 Ind3:
 ldi temp, 79
-OR temp, flag1
-out PORTB, temp
-ret
+rjmp ind_out
 Ind4:
 ldi temp, 102
-OR temp, flag1
-out PORTB, temp
-ret
+rjmp ind_out
 Ind5:
 ldi temp, 109
-OR temp, flag1
-out PORTB, temp
-ret
+rjmp ind_out
 Ind6:
 ldi temp, 125
-OR temp, flag1
-out PORTB, temp
-ret
+rjmp ind_out
 Ind7:
 ldi temp, 7
-OR temp, flag1
-out PORTB, temp
-ret
+rjmp ind_out
 Ind8:
 ldi temp, 127
-OR temp, flag1
-out PORTB, temp
-ret
+rjmp ind_out
 Ind9:
 ldi temp, 111
-OR temp, flag1
-out PORTB, temp
-ret
+rjmp ind_out
 Ind0:
 ldi temp, 63
+rjmp ind_out
+
+ind_out:
 OR temp, flag1
 out PORTB, temp
+rcall Delay
 ret
+*/
+
 //////////////////////////////////
 
 //////////////////////////////////
@@ -356,7 +394,7 @@ ret
 /////////////////////////////////
 
 Delay:
-ldi del1, 255//5
+ldi del1, 255
 
 PDelay:
 dec del1
