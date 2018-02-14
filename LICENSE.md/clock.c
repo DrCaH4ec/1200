@@ -1,36 +1,29 @@
+//Progect: Clock at AT90S1200(CC)
+//F_CPU: 8MHz
+
 .include "1200def.inc"
 
 .def temp = r16
 .def del1 = r17
-.def flag1 = r19
-.def count = r20
-.def seco1 = r21
-.def razr2 = r22
-.def razr3 = r23
-.def indtemp = r24
-.def razr4 = r25
-.def razr1 = r26
-.def seco2 = r18
-.def flag = r28
-.def addr = r30
+.def count = r18
+.def seco1 = r19
+.def razr2 = r20
+.def razr3 = r21
+.def indtemp = r22
+.def razr4 = r23
+.def razr1 = r24
+.def seco2 = r25
+.def flag = r26
+.def ind1 = r27
+.def flag1 = r28
 
 .dseg
 .cseg
-
-
-
 
 rjmp Reset
 reti
 .org $002 
 rjmp TIM0_OVF // Timer0 Overflow Handler
-
-.org $004
-//store ind codes here
-ind_table:
-.db 63, 6, 91, 79, 102, 109, 125, 7, 127, 111
-
-
 
 Reset:
 
@@ -40,30 +33,26 @@ ldi razr1, 0
 ldi razr2, 0
 ldi razr4, 0
 ldi razr3, 0
+ldi ind1, 0
 
-ldi temp, 0xff
-out DDRB, temp
+ldi temp, 0xff 
+out DDRB, temp //PORTB 0:7 -> output
 ldi temp, 0b0001111
-out DDRD, temp
-ldi temp, 0b0001000
-out PORTD, temp
+out DDRD, temp //PORTD 0:3 -> output; 4:6 -> input
 
 ldi temp, 0b00000010
 out TIMSK, temp
 out TIFR, temp
 
-ldi temp, 0x83
+ldi temp, 6//0x83
 out TCNT0, temp
  
-ldi temp, 0b00000100// prescaler 256
+ldi temp, 0b00000100 // prescaler 256
 out TCCR0, temp
 
 sei
 
-
-
-
-
+//"Array" of data for indication
 ldi temp, 63
 mov r0, temp
 ldi temp, 6
@@ -86,60 +75,51 @@ ldi temp, 111
 mov r9, temp
 
 
-
-
 //////////////////////////////////////////
 ////////********MAIN********//////////////
 //////////////////////////////////////////
 Main:
 
-sbis PIND, 6
+sbis PIND, 6//Inc minutes
 rcall but11
 
-sbis PIND, 5
+sbis PIND, 5//Inc hours
 rcall but23
+
 
 ldi temp, 0b1110
 out PORTD, temp
 //mov indtemp, razr3
 mov indtemp, razr1
 rcall Ind
-//rcall Delay
-//rcall nul
+
+
 
 ldi temp, 0b1101
 out PORTD, temp
 //mov indtemp, razr4
 mov indtemp, razr2
 rcall Ind
-//rcall Delay
-//rcall nul
+
 
 ldi temp, 0b0111
 out PORTD, temp
-//mov indtemp, seco1
+//mov indtemp, seco2
 mov indtemp, razr3
 rcall Ind
-//rcall Delay
-//rcall nul
+
 
 ldi temp, 0b1011
 out PORTD, temp
 //mov indtemp, seco1
 mov indtemp, razr4
 rcall Ind
-//rcall Delay
-//rcall nul
+
 
 rjmp Main
 //////////////////////////////////////////
-/*
-nul:
-ldi temp, 0x00
-OR temp, flag1
-out PORTB, temp
-ret
-*/
+
+
 ////////////////////////////////////////
 /////////******INTERRUPT******//////////
 ///////////////////////////////////////
@@ -148,21 +128,15 @@ cli
 
 inc count
 
-cpi count, 125
-breq nul1
-
 /////////////
-cpi count, 250
+cpi count, 125//250
 breq f
 /////////////
-
 rjmp output
 //............................................//
-nul1:
-ldi flag, 1
-rjmp output
 
 f:
+ldi flag, 1
 cpi flag1, 0
 breq f1
 ldi flag1, 0
@@ -179,7 +153,7 @@ breq umn11
 rjmp output
 
 umn11:
-ldi flag1, 0
+ldi flag, 0
 ldi seco1, 0
 inc seco2
 cpi seco2, 6
@@ -233,9 +207,11 @@ ldi razr1, 0
 
 output:
 //////////////
-ldi temp, 0x83
+ldi temp, 6//0x83
 //////////////
 out TCNT0, temp
+
+output1:
 sei
 reti
 ////////////////////////////////////////////////////
@@ -316,85 +292,26 @@ ret
 
 Ind:
 
-//check indtemp for ranges
-//here
-ldi addr, low(ind_table)
-//ldi XH, high(ind_table)
-add addr, indtemp
-//ld temp, addr
+add ZL, indtemp
+ld temp, Z
+ldi ZL, 0
 OR temp, flag1
 out PORTB, temp
 rcall Delay
-ret
 
-
-/*
-cpi indtemp, 1
-breq Ind1
-cpi indtemp, 2
-breq Ind2
-cpi indtemp, 3
-breq Ind3
-cpi indtemp, 4
-breq Ind4
-cpi indtemp, 5
-breq Ind5
-cpi indtemp, 6
-breq Ind6
-cpi indtemp, 7
-breq Ind7
-cpi indtemp, 8
-breq Ind8
-cpi indtemp, 9
-breq Ind9
-cpi indtemp, 0
-breq Ind0
-Ind1:
-ldi temp, 6
-rjmp ind_out
-Ind2:
-ldi temp, 91
-rjmp ind_out
-Ind3:
-ldi temp, 79
-rjmp ind_out
-Ind4:
-ldi temp, 102
-rjmp ind_out
-Ind5:
-ldi temp, 109
-rjmp ind_out
-Ind6:
-ldi temp, 125
-rjmp ind_out
-Ind7:
-ldi temp, 7
-rjmp ind_out
-Ind8:
-ldi temp, 127
-rjmp ind_out
-Ind9:
-ldi temp, 111
-rjmp ind_out
-Ind0:
-ldi temp, 63
-rjmp ind_out
-
-ind_out:
-OR temp, flag1
+ldi temp, 0
+or temp, flag1
 out PORTB, temp
-rcall Delay
-ret
-*/
 
-//////////////////////////////////
+ret
+
 
 //////////////////////////////////
 ///////*****DELAY*****///////////
 /////////////////////////////////
 
 Delay:
-ldi del1, 255
+ldi del1, 255//5
 
 PDelay:
 dec del1
@@ -402,8 +319,6 @@ brne PDelay
 
 ret
 //////////////////////////////////
-
-
 
 
 
